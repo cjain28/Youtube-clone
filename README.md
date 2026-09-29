@@ -1,70 +1,90 @@
-# Getting Started with Create React App
+# Youtube-clone
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A small React app that searches YouTube with the YouTube Data API v3 and plays the selected video in an embedded player, next to a clickable list of results.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Search YouTube videos by keyword (press **Enter** to search)
+- Shows up to 50 results, each with a thumbnail and title
+- Click a result to play it in the embedded player, with its title and description below
+- On page load, runs a default search (`"Blast"`) and auto-selects the first result so the player isn't empty
 
-### `npm start`
+## Tech stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React 18 (class components)
+- [Create React App](https://create-react-app.dev) (`react-scripts` 5)
+- [axios](https://axios-http.com) for HTTP requests
+- [Semantic UI](https://semantic-ui.com) for styling (loaded from a CDN in `public/index.html`)
+- [YouTube Data API v3](https://developers.google.com/youtube/v3/docs/search/list)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Getting started
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js 14 or newer
+- A Google API key with the **YouTube Data API v3** enabled:
+  1. Open the [Google Cloud Console](https://console.cloud.google.com/) and create or select a project.
+  2. Go to **APIs & Services → Library** and enable **YouTube Data API v3**.
+  3. Go to **APIs & Services → Credentials** and create an **API key**.
 
-### `npm run build`
+### Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+git clone https://github.com/cjain28/Youtube-clone.git
+cd Youtube-clone
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Copy the example env file and put in your key:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+cp .env.example .env
+```
 
-### `npm run eject`
+```env
+REACT_APP_YOUTUBE_API_KEY=your_key_here
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Then start the dev server:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The app runs at <http://localhost:3000>. If you edit `.env`, restart `npm start`, because env variables are only read at startup.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Available scripts
 
-## Learn More
+| Command         | What it does                                        |
+| --------------- | --------------------------------------------------- |
+| `npm start`     | Runs the app in development mode on port 3000       |
+| `npm run build` | Builds an optimized production bundle into `build/` |
+| `npm test`      | Runs the test runner in watch mode                  |
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Project structure
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```
+src/
+├── apis/
+│   └── youtube.js         # Preconfigured axios instance (base URL, key, default params)
+├── Components/
+│   ├── App.js             # Holds the video list + selected video; runs the search
+│   ├── SearchBar.js       # Controlled input; calls onTermSubmit(term) on Enter
+│   ├── VideoList.js       # Maps results to VideoItem components
+│   ├── VideoItem.js       # Thumbnail + title; click to select
+│   ├── VideoItem.css
+│   └── VideoDetail.js     # Embedded player + title/description of the selected video
+└── index.js               # Entry point
+```
 
-### Code Splitting
+## How it works
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+1. `src/apis/youtube.js` creates an axios instance with base URL `https://www.googleapis.com/youtube/v3`. It sends these default params on every request: `part=snippet`, `type=video`, `maxResults=50`, and your API key.
+2. When a search is submitted, `App` calls `GET /search?q=<term>`. It stores the returned items and selects the first one.
+3. Clicking a `VideoItem` calls `onSelectedVideo(video)`, which updates the selected video in `App` state.
+4. `VideoDetail` embeds `https://youtube.com/embed/<videoId>` in an iframe.
 
-### Analyzing the Bundle Size
+## Quota and security notes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- **Quota:** each search costs 100 units of the YouTube Data API's default daily quota of 10,000 units. That's roughly 100 searches a day, including the automatic search on every page load.
+- **Key exposure:** Create React App builds `REACT_APP_*` variables into the JavaScript bundle, so anyone who opens the deployed site can see the key. In the Google Cloud Console, restrict the key to the YouTube Data API and to your site's HTTP referrers.
